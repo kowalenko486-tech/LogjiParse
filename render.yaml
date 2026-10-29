@@ -1,0 +1,34 @@
+services:
+  # Web service running FastAPI app
+  - type: web
+    name: lojiparse-web
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.8
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lojiparse-db
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+        description: "OpenAI API Key (starting with sk-...) used for parsing emails."
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+        description: "Supabase Project JWT Secret for verifying user session tokens."
+      - key: STRIPE_SECRET_KEY
+        sync: false
+        description: "Stripe Secret Key (sk_test_...) for checkout and billing portal creation."
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+        description: "Stripe Webhook Signing Secret (whsec_...) for payment event sync."
+      - key: MAILGUN_SIGNING_KEY
+        sync: false
+        description: "Mailgun HTTP Webhook signing key used to verify incoming e-mail payloads."
+
+databases:
+  - name: lojiparse-db
+    plan: free

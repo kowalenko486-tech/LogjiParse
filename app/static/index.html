@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="pl" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LojiParse - Inteligentny Parser Logistyczny</title>
+    <!-- Google Fonts: Outfit i Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS v3.4 Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Outfit', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Dodatkowe micro-animacje i efekty szklane */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.45);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+        .glass-card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card-hover:hover {
+            transform: translateY(-2px);
+            background: rgba(30, 41, 59, 0.6);
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.2);
+        }
+        .glow-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans overflow-x-hidden relative">
+    <!-- Tło ze świetlistymi kulami -->
+    <div class="glow-orb w-[500px] h-[500px] bg-indigo-600 top-[-100px] left-[-100px]"></div>
+    <div class="glow-orb w-[600px] h-[600px] bg-purple-600 bottom-[-200px] right-[-200px]"></div>
+
+
+
+    <!-- EKRAN GŁÓWNY (DASHBOARD) -->
+    <div id="dashboard-container" class="flex-1 flex flex-col z-10">
+        <!-- Top Bar -->
+        <header class="glass-panel border-b border-slate-800/80 sticky top-0 z-20">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-indigo-600/20 text-indigo-400 rounded-lg border border-indigo-500/20">
+                        <i class="fa-solid fa-truck-ramp-box text-xl"></i>
+                    </div>
+                    <span class="text-xl font-outfit font-bold tracking-tight bg-gradient-to-r from-indigo-100 to-slate-100 bg-clip-text text-transparent">LojiParse</span>
+                </div>
+
+
+
+                <div class="flex items-center gap-4">
+
+
+                    <!-- Email użytkownika -->
+                    <span id="user-email-display" class="text-slate-400 text-sm hidden font-medium">uzytkownik@firma.pl</span>
+
+
+                    
+                    <button id="btn-logout" class="text-xs bg-red-950/40 hover:bg-red-900/40 text-red-300 border border-red-900/40 px-3 py-2 rounded-xl transition flex items-center gap-1.5 font-medium hidden">
+                        <i class="fa-solid fa-right-from-bracket"></i> Wyloguj
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content (Dashboard View) -->
+        <main id="dashboard-view" class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+            <!-- Górne widgety informacyjne -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Karta skrzynki odbiorczej -->
+                <div class="p-6 rounded-2xl glass-panel shadow-md flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Adres Inbound (Mailgun)</span>
+                            <i class="fa-regular fa-envelope text-slate-500 text-lg"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-200 mb-1">Twój dedykowany e-mail</h3>
+                        <p class="text-xs text-slate-400 mb-3">Przekieruj tu zapytania frachtowe, aby automatycznie je przetworzyć.</p>
+                    </div>
+                    <div class="flex items-center gap-2 bg-slate-950/60 border border-slate-800 p-2.5 rounded-xl">
+                        <input type="text" id="inbound-email-address" readonly class="bg-transparent text-xs text-slate-300 font-mono focus:outline-none flex-1 truncate" value="loading...">
+                        <button id="btn-copy-email" class="text-xs bg-slate-800 hover:bg-slate-700 text-indigo-400 p-1.5 rounded-lg border border-slate-700/60 transition" title="Kopiuj">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Karta symulacji maila (Developer helper) -->
+                <div class="p-6 rounded-2xl glass-panel shadow-md flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-semibold text-purple-400 uppercase tracking-wider">Deweloper</span>
+                            <i class="fa-solid fa-flask text-slate-500 text-lg"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-200 mb-1">Testowy Webhook</h3>
+                        <p class="text-xs text-slate-400 mb-3">Symuluj nadejście nowej wiadomości mailowej do systemu.</p>
+                    </div>
+                    <button id="btn-open-simulator" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2.5 px-4 rounded-xl transition text-xs flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-paper-plane"></i> Wyślij testowego maila
+                    </button>
+                </div>
+
+
+            </div>
+
+            <!-- Tabela Przetworzonych Zapytań -->
+            <div class="rounded-2xl glass-panel shadow-xl overflow-hidden">
+                <div class="p-6 border-b border-slate-800/80 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-outfit font-bold text-slate-100">Przetworzone zapytania logistyczne</h2>
+                        <p class="text-xs text-slate-400 mt-1">Lista wszystkich maili przetworzonych przez sztuczną inteligencję.</p>
+                    </div>
+                    <button id="btn-refresh" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700/60 transition" title="Odśwież listę">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
+                </div>
+
+                <!-- Tabela -->
+                <div class="overflow-x-auto min-h-[200px]">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-900/60 text-slate-400 text-xs font-semibold uppercase tracking-wider border-b border-slate-800/80">
+                            <tr>
+                                <th class="py-4 px-6">Status</th>
+                                <th class="py-4 px-6">Nadawca</th>
+                                <th class="py-4 px-6">Temat</th>
+                                <th class="py-4 px-6">Trasa</th>
+                                <th class="py-4 px-6">Cena (EUR)</th>
+                                <th class="py-4 px-6">Data odebrania</th>
+                                <th class="py-4 px-6 text-right">Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody id="queries-table-body" class="divide-y divide-slate-800/40">
+                            <!-- Wypełniane dynamicznie w JS -->
+                        </tbody>
+                    </table>
+
+                    <!-- Brak elementów -->
+                    <div id="no-queries-alert" class="hidden flex flex-col items-center justify-center p-12 text-slate-500">
+                        <i class="fa-solid fa-inbox text-5xl mb-3 text-slate-700"></i>
+                        <p class="text-sm font-semibold">Brak przetworzonych zapytań</p>
+                        <p class="text-xs text-slate-600 mt-1">Wyślij testowego maila na swój dedykowany adres, aby go tutaj zobaczyć.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+
+    </div>
+
+    <!-- MODAL: SZCZEGÓŁY ZAPYTANIA -->
+    <div id="modal-details" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="w-full max-w-4xl max-h-[85vh] rounded-2xl glass-panel shadow-2xl flex flex-col overflow-hidden relative">
+            <div class="absolute top-0 left-0 w-full h-[3px] bg-indigo-600"></div>
+            
+            <!-- Modal Header -->
+            <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-bold font-outfit text-slate-100" id="detail-modal-title">Zapytanie Logistyczne</h3>
+                    <p class="text-xs text-slate-400 mt-1" id="detail-modal-sender">Nadawca: ...</p>
+                </div>
+                <button class="modal-close-btn text-slate-400 hover:text-slate-200 p-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                <!-- Status & Price Summary -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 bg-slate-950/40 border border-slate-800 rounded-xl">
+                        <span class="text-xs font-semibold text-slate-400 block mb-1">Status Przetwarzania</span>
+                        <div class="flex items-center gap-2">
+                            <span id="detail-status-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-800 text-slate-300">...</span>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-indigo-950/20 border border-indigo-900/20 rounded-xl">
+                        <span class="text-xs font-semibold text-indigo-400 block mb-1">Wycena Szacunkowa OpenAI</span>
+                        <div class="text-xl font-extrabold text-indigo-300" id="detail-price-text">...</div>
+                    </div>
+                </div>
+
+                <!-- Dwie kolumny: Dane wyciągnięte (JSON) vs Oryginalny Email -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Lewa kolumna: Sparsowane encje -->
+                    <div class="space-y-4">
+                        <h4 class="text-sm font-semibold text-indigo-400 uppercase tracking-wider border-b border-slate-800 pb-2">Wyodrębnione Dane Logistyczne</h4>
+                        
+                        <div class="space-y-3">
+                            <div>
+                                <span class="text-xs text-slate-500 block">Trasa (Załadunek → Dostawa)</span>
+                                <div class="text-sm font-medium text-slate-200" id="detail-route-text">...</div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <span class="text-xs text-slate-500 block">Waga Całkowita</span>
+                                    <div class="text-sm font-medium text-slate-200" id="detail-weight-text">...</div>
+                                </div>
+                                <div>
+                                    <span class="text-xs text-slate-500 block">Objętość Całkowita</span>
+                                    <div class="text-sm font-medium text-slate-200" id="detail-volume-text">...</div>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-xs text-slate-500 block">Instrukcje Specjalne</span>
+                                <div class="text-sm font-medium text-slate-300 bg-slate-950/20 p-2.5 rounded-lg border border-slate-800/40 text-xs italic" id="detail-instructions-text">...</div>
+                            </div>
+                        </div>
+
+                        <!-- Tabela towarów -->
+                        <div>
+                            <span class="text-xs text-slate-500 block mb-2">Pozycje towarowe (Cargo Items)</span>
+                            <div class="overflow-x-auto rounded-lg border border-slate-800">
+                                <table class="w-full text-left text-xs text-slate-300">
+                                    <thead class="bg-slate-900 text-slate-400 font-semibold uppercase border-b border-slate-800">
+                                        <tr>
+                                            <th class="py-2 px-3">Opis</th>
+                                            <th class="py-2 px-3 text-center">Ilość</th>
+                                            <th class="py-2 px-3">Waga</th>
+                                            <th class="py-2 px-3">Wymiary (cm)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="detail-cargo-tbody" class="divide-y divide-slate-800">
+                                        <!-- Wypełniane dynamicznie -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prawa kolumna: Oryginalny tekst -->
+                    <div class="space-y-4 flex flex-col">
+                        <h4 class="text-sm font-semibold text-purple-400 uppercase tracking-wider border-b border-slate-800 pb-2">Oryginalna Treść Wiadomości</h4>
+                        <div class="flex-1 bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-xs text-slate-400 font-mono overflow-y-auto max-h-[300px] whitespace-pre-wrap leading-relaxed" id="detail-original-body">
+                            ...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-6 border-t border-slate-800 flex items-center justify-between bg-slate-900/20">
+                <button id="btn-download-pdf-modal" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 px-5 rounded-xl transition text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/10">
+                    <i class="fa-solid fa-file-pdf"></i> Pobierz wycenę PDF
+                </button>
+                <button class="modal-close-btn bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 py-2 px-4 rounded-xl transition text-sm">
+                    Zamknij
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: SYMULATOR WEBHOOKA MAILGUN -->
+    <div id="modal-simulator" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="w-full max-w-lg rounded-2xl glass-panel shadow-2xl flex flex-col overflow-hidden relative">
+            <div class="absolute top-0 left-0 w-full h-[3px] bg-purple-600"></div>
+            
+            <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-bold font-outfit text-slate-100">Symulator Webhooka Mailgun</h3>
+                    <p class="text-xs text-slate-400 mt-1">Wyślij przykładową treść maila do parsera.</p>
+                </div>
+                <button id="simulator-close-btn" class="text-slate-400 hover:text-slate-200 p-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="simulator-form" class="p-6 space-y-4">
+                <div>
+                    <label for="sim-sender" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Nadawca E-mail (from)</label>
+                    <input type="email" id="sim-sender" required class="w-full bg-slate-950/60 border border-slate-700/60 rounded-xl py-2 px-3 text-slate-200 text-xs focus:outline-none focus:border-purple-500 transition" placeholder="spedytor@firma.pl" value="spedition@freight-expert.com">
+                </div>
+
+                <div>
+                    <label for="sim-subject" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Temat maila</label>
+                    <input type="text" id="sim-subject" required class="w-full bg-slate-950/60 border border-slate-700/60 rounded-xl py-2 px-3 text-slate-200 text-xs focus:outline-none focus:border-purple-500 transition" placeholder="Temat" value="Zapytanie o transport: Warszawa - Berlin (4 palety, 1200kg)">
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label for="sim-body" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Treść wiadomości (body-plain)</label>
+                        <button type="button" id="btn-load-sample" class="text-[10px] text-purple-400 hover:underline">Załaduj szablon</button>
+                    </div>
+                    <textarea id="sim-body" required rows="6" class="w-full bg-slate-950/60 border border-slate-700/60 rounded-xl py-2 px-3 text-slate-200 text-xs font-mono focus:outline-none focus:border-purple-500 transition resize-none" placeholder="Wpisz treść maila logistycznego..."></textarea>
+                </div>
+
+                <div class="flex gap-3 justify-end pt-2">
+                    <button type="button" id="simulator-cancel-btn" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 py-2 px-4 rounded-xl text-xs transition">
+                        Anuluj
+                    </button>
+                    <button type="submit" class="bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2 px-5 rounded-xl text-xs transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-paper-plane"></i> Wyślij Webhook
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- POWIADOMIENIA TOAST -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+
+    <!-- Skrypt Auth i App -->
+    <script src="/static/js/auth.js?v=3"></script>
+    <script src="/static/js/app.js?v=3"></script>
+</body>
+</html>

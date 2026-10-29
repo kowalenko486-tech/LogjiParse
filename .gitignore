@@ -1,0 +1,35 @@
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# Python caching and compiled bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Databases
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Vercel deployment folder
+.vercel/
+
+# Environment configurations and secrets
+.env
+.env.*
+
+# Generated PDFs and test output
+test_output.pdf
+query_*.pdf
+scratch/
+
+# Operating system files
+.DS_Store
+Thumbs.db
